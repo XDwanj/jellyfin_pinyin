@@ -22,9 +22,9 @@ class JellyfinHandler:
     def init(self):
         """从环境变量加载配置并启动主循环扫描"""
         self.domain = os.getenv("URL", "http://127.0.0.1:8096")  # 服务器地址
-        self.key = os.getenv("KEY")                             # API KEY
-        self.media = os.getenv("MEDIA", "")                     # 需要处理的媒体库
-        self.time = int(os.getenv("TIME", "3600"))              # 扫描间隔时间
+        self.key = os.getenv("KEY")  # API KEY
+        self.media = os.getenv("MEDIA", "")  # 需要处理的媒体库
+        self.time = int(os.getenv("TIME", "3600"))  # 扫描间隔时间
         self.log.info(f"扫描媒体库: {self.media if self.media else '全部'}")
 
         if not self.domain:
@@ -81,22 +81,36 @@ class JellyfinHandler:
     def render_items(self, items):
         """处理媒体项目列表，为每个项目添加拼音排序"""
         folders = ["Folder", "Season", "CollectionFolder"]
-        objects = ["Series", "Movie", "BoxSet", "Audio", "MusicAlbum",
-                   "MusicArtist", "Video", "Photo", "Episode", "MusicVideo"]
+        objects = [
+            "Series",
+            "Movie",
+            "BoxSet",
+            "Audio",
+            "MusicAlbum",
+            "MusicArtist",
+            "Video",
+            "Photo",
+            "Episode",
+            "MusicVideo",
+        ]
 
         for item in items:
             if item.get("Type") in folders:
                 self.render_folder(item.get("Id"), item.get("CollectionType"))
             elif item.get("Type") in objects:
                 item_detail = JellyfinUtil.get_item(
-                    self.domain, self.key, self.user_id, item.get("Id"))
+                    self.domain, self.key, self.user_id, item.get("Id")
+                )
                 if not item_detail:
                     self.log.error("服务器出错,请重启Jellyfin")
                     return
 
                 forced_sort_name = item_detail.get("ForcedSortName")
-                pinyin = PinyinUtil.get_pingyin(item_detail.get(
-                    "Name", "")) if item_detail.get("Name") else ""
+                pinyin = (
+                    PinyinUtil.get_pingyin(item_detail.get("Name", ""))
+                    if item_detail.get("Name")
+                    else ""
+                )
                 if pinyin and len(pinyin) > 50:
                     pinyin = pinyin[:50]
 
@@ -115,22 +129,24 @@ class JellyfinHandler:
                     if date_info:
                         year, month = date_info
                         item_detail["PremiereDate"] = DateUtil.format_jellyfin_date(
-                            year, month)
+                            year, month
+                        )
                         item_detail["ProductionYear"] = year
                         self.log.info(
-                            f"设置日期 {item_detail.get('Name')} -> {year}-{month:02d}-01")
+                            f"设置日期 {item_detail.get('Name')} -> {year}-{month:02d}-01"
+                        )
 
                     # emby 锁定字段，否则不生效
                     # 判断self.domain路径是否包含emby字符串
                     if "emby" in self.domain:
                         locked_fields = ["SortName"]
                         if date_info:
-                            locked_fields.extend(
-                                ["PremiereDate", "ProductionYear"])
+                            locked_fields.extend(["PremiereDate", "ProductionYear"])
                         item_detail["LockedFields"] = locked_fields
 
                     JellyfinUtil.post_item(
-                        self.domain, self.key, item.get("Id"), item_detail)
+                        self.domain, self.key, item.get("Id"), item_detail
+                    )
                     self.process_count += 1
             else:
                 self.log.info(f"跳过，未知类型：{json.dumps(item)}")
@@ -141,18 +157,21 @@ class JellyfinHandler:
         if collection_type is not None and collection_type.lower() == "music":
             # 专辑
             music_items = JellyfinUtil.get_music_items(
-                self.domain, self.key, self.user_id, view_id)
+                self.domain, self.key, self.user_id, view_id
+            )
             if music_items:
                 self.render_items(music_items.get("Items", []))
 
             # 艺术家
             artists = JellyfinUtil.get_artists(
-                self.domain, self.key, self.user_id, view_id)
+                self.domain, self.key, self.user_id, view_id
+            )
             if artists:
                 self.render_items(artists.get("Items", []))
         else:
             nut_map = JellyfinUtil.get_items(
-                self.domain, self.key, self.user_id, view_id)
+                self.domain, self.key, self.user_id, view_id
+            )
             if nut_map:
                 self.render_items(nut_map.get("Items", []))
 
@@ -164,7 +183,8 @@ class JellyfinHandler:
         self.render_folder(view.get("Id"), view.get("CollectionType"))
         elapsed_time = time.time() - start_time
         self.log.info(
-            f"已跳过：{self.skip_count}，已处理：{self.process_count}, 耗时 {elapsed_time:.2f} 秒")
+            f"已跳过：{self.skip_count}，已处理：{self.process_count}, 耗时 {elapsed_time:.2f} 秒"
+        )
 
     def init_count(self):
         """重置处理和跳过计数器"""

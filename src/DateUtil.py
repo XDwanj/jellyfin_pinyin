@@ -1,10 +1,11 @@
 import re
 
+
 class DateUtil:
     @staticmethod
     def extract_date_from_filename(filename):
         """从文件名提取[YYYY-MM]格式的日期"""
-        pattern = r'^\[(\d{4})-(\d{1,2})\]'
+        pattern = r"^\[(\d{4})-(\d{1,2})\]"
         match = re.match(pattern, filename)
         if match:
             year = int(match.group(1))
