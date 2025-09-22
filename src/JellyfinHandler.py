@@ -29,6 +29,11 @@ class JellyfinHandler:
         self.log.info(f"扫描媒体库: {self.media if self.media else '全部'}")
         self.forced = os.getenv("FORCED", "0")
 
+        # 日志打印环境变量
+        self.log.info(
+            f"环境变量: URL={self.domain}, KEY={'***' if self.key else ''}, MEDIA={self.media}, TIME={self.time}, FORCED={self.forced}"
+        )
+
         if not self.domain:
             self.log.info("服务器地址未设置,使用默认地址 http://127.0.0.1:8096")
         else:
