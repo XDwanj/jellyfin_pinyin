@@ -3,10 +3,12 @@ import json
 import time
 from PinyinUtil import PinyinUtil  # 需要实现PinyinUtil
 from JellyfinUtil import JellyfinUtil  # 需要实现JellyfinUtil
+from DateUtil import DateUtil
 import logging
 
 class JellyfinHandler:
     def __init__(self):
+        """初始化JellyfinHandler实例，设置默认参数"""
         self.log = logging.getLogger(__name__)
         self.domain = ""    #http://10.10.10.10:8096
         self.key = ""       #API KEY
@@ -17,6 +19,7 @@ class JellyfinHandler:
         self.user_id = ""
 
     def init(self):
+        """从环境变量加载配置并启动主循环扫描"""
         self.domain = os.getenv("URL", "http://127.0.0.1:8096") # 服务器地址
         self.key = os.getenv("KEY")                             # API KEY
         self.media = os.getenv("MEDIA", "")                     # 需要处理的媒体库
@@ -42,6 +45,7 @@ class JellyfinHandler:
 
 
     def run(self):
+        """主执行流程，扫描并处理所有媒体库"""
         self.user_id = self.get_user_id()
         if not self.user_id:
             self.log.error("未获取到管理员用户")
@@ -54,6 +58,7 @@ class JellyfinHandler:
                 self.processed_view(view)
 
     def get_user_id(self):
+        """获取Jellyfin的管理员用户ID"""
         nut_map = JellyfinUtil.get_users(self.domain, self.key)
         if not nut_map:
             return None
@@ -65,6 +70,7 @@ class JellyfinHandler:
         return None
 
     def get_views(self):
+        """获取媒体库视图列表"""
         nut_map = JellyfinUtil.get_views(self.domain, self.key, self.user_id)
         if not nut_map:
             self.log.error("未获取到媒体库")
@@ -73,6 +79,7 @@ class JellyfinHandler:
         return nut_map.get("Items", [])
 
     def render_items(self, items):
+        """处理媒体项目列表，为每个项目添加拼音排序"""
         folders = ["Folder", "Season", "CollectionFolder"]
         objects = ["Series", "Movie", "BoxSet", "Audio", "MusicAlbum", "MusicArtist", "Video", "Photo", "Episode"]
         
@@ -97,10 +104,22 @@ class JellyfinHandler:
                     self.log.info(f"处理 {item_detail.get('Name')}")
                     item_detail["ForcedSortName"] = pinyin
                     item_detail["SortName"] = pinyin
+
+                    # 日期解析逻辑
+                    date_info = DateUtil.extract_date_from_filename(item_detail.get("Name", ""))
+                    if date_info:
+                        year, month = date_info
+                        item_detail["PremiereDate"] = DateUtil.format_jellyfin_date(year, month)
+                        item_detail["ProductionYear"] = year
+                        self.log.info(f"设置日期 {item_detail.get('Name')} -> {year}-{month:02d}-01")
+
                     # emby 锁定字段，否则不生效
                     # 判断self.domain路径是否包含emby字符串
                     if "emby" in self.domain:
-                        item_detail["LockedFields"] = ["SortName"]
+                        locked_fields = ["SortName"]
+                        if date_info:
+                            locked_fields.extend(["PremiereDate", "ProductionYear"])
+                        item_detail["LockedFields"] = locked_fields
                     
                     JellyfinUtil.post_item(self.domain, self.key, item.get("Id"), item_detail)
                     self.process_count += 1
@@ -109,6 +128,7 @@ class JellyfinHandler:
                 self.skip_count += 1
 
     def render_folder(self, view_id, collection_type):
+        """根据媒体库类型处理文件夹内容"""
         if collection_type is not None and collection_type.lower() == "music":
             # 专辑
             music_items = JellyfinUtil.get_music_items(self.domain, self.key, self.user_id, view_id)
@@ -125,6 +145,7 @@ class JellyfinHandler:
                 self.render_items(nut_map.get("Items", []))
 
     def processed_view(self, view):
+        """处理单个媒体库视图并记录统计信息"""
         self.init_count()
         start_time = time.time()
         self.log.info(f"开始处理 {view.get('Name')}")
@@ -133,6 +154,7 @@ class JellyfinHandler:
         self.log.info(f"已跳过：{self.skip_count}，已处理：{self.process_count}, 耗时 {elapsed_time:.2f} 秒")
 
     def init_count(self):
+        """重置处理和跳过计数器"""
         self.process_count = 0
         self.skip_count = 0
 

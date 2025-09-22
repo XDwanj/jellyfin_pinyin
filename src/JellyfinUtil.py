@@ -8,6 +8,7 @@ class JellyfinUtil:
 
     @staticmethod
     def get_users(domain, key):
+        """获取Jellyfin服务器的用户列表"""
         try:
             url = f"{domain}/Users?api_key={key}"
             headers = {"Content-Type": "application/json"}
@@ -22,6 +23,7 @@ class JellyfinUtil:
 
     @staticmethod
     def get_views(domain, key, user_id):
+        """获取指定用户的媒体库视图列表"""
         try:
             url = f"{domain}/Users/{user_id}/Views?api_key={key}"
             headers = {"Content-Type": "application/json"}
@@ -36,6 +38,7 @@ class JellyfinUtil:
 
     @staticmethod
     def get_items(domain, key, user_id, pid):
+        """获取指定父级目录下的媒体项目列表"""
         try:
             url = f"{domain}/Users/{user_id}/Items?api_key={key}&ParentId={pid}"
             headers = {"Content-Type": "application/json"}
@@ -50,6 +53,7 @@ class JellyfinUtil:
 
     @staticmethod
     def get_music_items(domain, key, user_id, pid):
+        """获取指定父级目录下的音乐专辑列表"""
         try:
             url = f"{domain}/Users/{user_id}/Items?api_key={key}&IncludeItemTypes=MusicAlbum&Recursive=true&ParentId={pid}"
             headers = {"Content-Type": "application/json"}
@@ -64,6 +68,7 @@ class JellyfinUtil:
 
     @staticmethod
     def get_artists(domain, key, user_id, pid):
+        """获取指定父级目录下的艺术家列表"""
         try:
             url = f"{domain}/Artists?api_key={key}&userId={user_id}&ArtistType=Artist,AlbumArtist&Recursive=true&ParentId={pid}"
             headers = {"Content-Type": "application/json"}
@@ -78,6 +83,7 @@ class JellyfinUtil:
 
     @staticmethod
     def get_item(domain, key, user_id, item_id):
+        """获取指定媒体项目的详细信息"""
         try:
             url = f"{domain}/Users/{user_id}/Items/{item_id}?source=jellyfin_pinyin&api_key={key}"
             headers = {"Content-Type": "application/json"}
@@ -92,6 +98,7 @@ class JellyfinUtil:
 
     @staticmethod
     def post_item(domain, key, item_id, item):
+        """更新指定媒体项目的信息"""
         try:
             url = f"{domain}/Items/{item_id}?api_key={key}"
             headers = {"Content-Type": "application/json"}
