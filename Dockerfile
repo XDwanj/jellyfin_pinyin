@@ -12,6 +12,7 @@ ENV TIME 3600
 ENV URL "http://127.0.0.1:8096"
 ENV KEY ""
 ENV MEDIA ""
+ENV FORCED "0"
 
 WORKDIR /app
 CMD ["python","/app/JellyfinHandler.py"]

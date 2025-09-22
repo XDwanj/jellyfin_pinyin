@@ -18,6 +18,7 @@ class JellyfinHandler:
         self.skip_count = 0
         self.time = 10
         self.user_id = ""
+        self.forced = os.getenv("FORCED", "0")
 
     def init(self):
         """从环境变量加载配置并启动主循环扫描"""
@@ -26,6 +27,7 @@ class JellyfinHandler:
         self.media = os.getenv("MEDIA", "")  # 需要处理的媒体库
         self.time = int(os.getenv("TIME", "3600"))  # 扫描间隔时间
         self.log.info(f"扫描媒体库: {self.media if self.media else '全部'}")
+        self.forced = os.getenv("FORCED", "0")
 
         if not self.domain:
             self.log.info("服务器地址未设置,使用默认地址 http://127.0.0.1:8096")
