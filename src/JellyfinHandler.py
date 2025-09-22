@@ -97,62 +97,65 @@ class JellyfinHandler:
         ]
 
         for item in items:
+            # 处理文件夹类型 - 提前continue
             if item.get("Type") in folders:
                 self.render_folder(item.get("Id"), item.get("CollectionType"))
-            elif item.get("Type") in objects:
-                item_detail = JellyfinUtil.get_item(
-                    self.domain, self.key, self.user_id, item.get("Id")
-                )
-                if not item_detail:
-                    self.log.error("服务器出错,请重启Jellyfin")
-                    return
+                continue
 
-                forced_sort_name = item_detail.get("ForcedSortName")
-                pinyin = (
-                    PinyinUtil.get_pingyin(item_detail.get("Name", ""))
-                    if item_detail.get("Name")
-                    else ""
-                )
-                if pinyin and len(pinyin) > 50:
-                    pinyin = pinyin[:50]
-
-                if forced_sort_name and pinyin == forced_sort_name:
-                    self.log.info(f"跳过 {item_detail.get('Name')}")
-                    self.skip_count += 1
-                else:
-                    self.log.info(f"处理 {item_detail.get('Name')}")
-                    item_detail["ForcedSortName"] = pinyin
-                    item_detail["SortName"] = pinyin
-
-                    # 日期解析逻辑
-                    date_info = DateUtil.extract_date_from_filename(
-                        item_detail.get("Name", "")
-                    )
-                    if date_info:
-                        year, month = date_info
-                        item_detail["PremiereDate"] = DateUtil.format_jellyfin_date(
-                            year, month
-                        )
-                        item_detail["ProductionYear"] = year
-                        self.log.info(
-                            f"设置日期 {item_detail.get('Name')} -> {year}-{month:02d}-01"
-                        )
-
-                    # emby 锁定字段，否则不生效
-                    # 判断self.domain路径是否包含emby字符串
-                    if "emby" in self.domain:
-                        locked_fields = ["SortName"]
-                        if date_info:
-                            locked_fields.extend(["PremiereDate", "ProductionYear"])
-                        item_detail["LockedFields"] = locked_fields
-
-                    JellyfinUtil.post_item(
-                        self.domain, self.key, item.get("Id"), item_detail
-                    )
-                    self.process_count += 1
-            else:
+            # 处理未知类型 - 提前continue
+            if item.get("Type") not in objects:
                 self.log.info(f"跳过，未知类型：{json.dumps(item)}")
                 self.skip_count += 1
+                continue
+
+            # 处理媒体对象
+            item_detail = JellyfinUtil.get_item(
+                self.domain, self.key, self.user_id, item.get("Id")
+            )
+            if not item_detail:
+                self.log.error("服务器出错,请重启Jellyfin")
+                return
+
+            forced_sort_name = item_detail.get("ForcedSortName")
+            pinyin = (
+                PinyinUtil.get_pingyin(item_detail.get("Name", ""))
+                if item_detail.get("Name")
+                else ""
+            )
+            if pinyin and len(pinyin) > 50:
+                pinyin = pinyin[:50]
+
+            # 检查跳过条件 - 提前continue
+            if (forced_sort_name and pinyin == forced_sort_name) and self.forced == "0":
+                self.log.info(f"跳过 {item_detail.get('Name')}")
+                self.skip_count += 1
+                continue
+
+            # 主处理逻辑
+            self.log.info(f"处理 {item_detail.get('Name')}")
+            item_detail["ForcedSortName"] = pinyin
+            item_detail["SortName"] = pinyin
+
+            # 日期解析逻辑
+            date_info = DateUtil.extract_date_from_filename(item_detail.get("Name", ""))
+            if date_info:
+                year, month = date_info
+                item_detail["PremiereDate"] = DateUtil.format_jellyfin_date(year, month)
+                item_detail["ProductionYear"] = year
+                self.log.info(
+                    f"设置日期 {item_detail.get('Name')} -> {year}-{month:02d}-01"
+                )
+
+            # emby 锁定字段，否则不生效
+            # 判断self.domain路径是否包含emby字符串
+            if "emby" in self.domain:
+                locked_fields = ["SortName"]
+                if date_info:
+                    locked_fields.extend(["PremiereDate", "ProductionYear"])
+                item_detail["LockedFields"] = locked_fields
+
+            JellyfinUtil.post_item(self.domain, self.key, item.get("Id"), item_detail)
+            self.process_count += 1
 
     def render_folder(self, view_id, collection_type):
         """根据媒体库类型处理文件夹内容"""
