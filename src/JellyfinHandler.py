@@ -131,8 +131,12 @@ class JellyfinHandler:
                 pinyin = pinyin[:50]
 
             # 检查跳过条件 - 提前continue
-            if (forced_sort_name and pinyin == forced_sort_name) and self.forced == "0":
-                self.log.info(f"跳过 {item_detail.get('Name')}")
+            if forced_sort_name and self.forced == "0":
+                self.log.info(f"跳过，forced_sort_name!=None: {item_detail.get('Name')}")
+                self.skip_count += 1
+                continue
+            if pinyin == forced_sort_name and self.forced == "0":
+                self.log.info(f"跳过，pinyin=forced_sort_name: {item_detail.get('Name')}")
                 self.skip_count += 1
                 continue
 
